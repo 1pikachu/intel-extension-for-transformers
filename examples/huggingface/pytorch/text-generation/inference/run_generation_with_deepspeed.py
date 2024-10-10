@@ -1,3 +1,4 @@
+import contextlib
 import sys
 import gc
 import json
@@ -485,7 +486,14 @@ def run_generate(num_tokens, num_input_tokens, num_beams):
             for i in range(cycles):
                 if i == cycles - 1:
                     os.environ["PTI_ENABLE_COLLECTION"] = "1"
-                with torch.autograd.profiler_legacy.profile(enabled=do_profiling, use_xpu=True, record_shapes=True) as prof:
+                with (
+                    contextlib.nullcontext() if not do_profiling else
+                    torch.profiler.profile(
+                        activities=[torch.profiler.ProfilerActivity.CPU,
+                                    torch.profiler.ProfilerActivity.XPU],
+                        record_shapes=True,
+                    )
+                ) as prof:
                     t0 = time.time()
                     gen_ids, outputs = generate()
                     if args.cuda:
